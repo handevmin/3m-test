@@ -749,6 +749,21 @@ class ProductAnalyzer {
     initializeElements() {
         // DOM 요소들 참조
         this.elements = {
+            // 방법 선택
+            methodSelection: document.getElementById('method-selection'),
+            cameraMethodBtn: document.getElementById('camera-method-btn'),
+            fileMethodBtn: document.getElementById('file-method-btn'),
+            
+            // 파일 업로드
+            fileSection: document.getElementById('file-section'),
+            fileInput: document.getElementById('file-input'),
+            selectFileBtn: document.getElementById('select-file-btn'),
+            selectedFile: document.getElementById('selected-file'),
+            filePreview: document.getElementById('file-preview'),
+            reselectFileBtn: document.getElementById('reselect-file'),
+            analyzeFileBtn: document.getElementById('analyze-file'),
+            
+            // 카메라
             cameraSection: document.getElementById('camera-section'),
             cameraStream: document.getElementById('camera-stream'),
             startCameraBtn: document.getElementById('start-camera'),
@@ -760,6 +775,7 @@ class ProductAnalyzer {
             retakePhotoBtn: document.getElementById('retake-photo'),
             analyzePhotoBtn: document.getElementById('analyze-photo'),
             
+            // 공통
             loadingSection: document.getElementById('loading-section'),
             resultsSection: document.getElementById('results-section'),
             resultsContent: document.getElementById('results-content'),
@@ -770,18 +786,138 @@ class ProductAnalyzer {
         
         this.canvas = this.elements.photoCanvas;
         this.context = this.canvas.getContext('2d');
+        
+        // 현재 선택된 이미지 데이터 저장용
+        this.currentImageData = null;
     }
     
     attachEventListeners() {
+        // 방법 선택
+        this.elements.cameraMethodBtn.addEventListener('click', () => this.selectCameraMethod());
+        this.elements.fileMethodBtn.addEventListener('click', () => this.selectFileMethod());
+        
+        // 파일 업로드
+        this.elements.selectFileBtn.addEventListener('click', () => this.selectFile());
+        this.elements.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+        this.elements.reselectFileBtn.addEventListener('click', () => this.reselectFile());
+        this.elements.analyzeFileBtn.addEventListener('click', () => this.analyzeFile());
+        
+        // 카메라
         this.elements.startCameraBtn.addEventListener('click', () => this.startCamera());
         this.elements.capturePhotoBtn.addEventListener('click', () => this.capturePhoto());
         this.elements.stopCameraBtn.addEventListener('click', () => this.stopCamera());
         this.elements.retakePhotoBtn.addEventListener('click', () => this.retakePhoto());
         this.elements.analyzePhotoBtn.addEventListener('click', () => this.analyzePhoto());
+        
+        // 공통
         this.elements.analyzeAgainBtn.addEventListener('click', () => this.analyzeAgain());
     }
     
-
+    // 방법 선택 관련 메서드
+    selectCameraMethod() {
+        this.elements.cameraMethodBtn.classList.add('active');
+        this.elements.fileMethodBtn.classList.remove('active');
+        
+        this.elements.cameraSection.style.display = 'block';
+        this.elements.fileSection.style.display = 'none';
+        
+        // 결과 및 로딩 섹션 숨기기
+        this.elements.resultsSection.style.display = 'none';
+        this.elements.loadingSection.style.display = 'none';
+    }
+    
+    selectFileMethod() {
+        this.elements.fileMethodBtn.classList.add('active');
+        this.elements.cameraMethodBtn.classList.remove('active');
+        
+        this.elements.fileSection.style.display = 'block';
+        this.elements.cameraSection.style.display = 'none';
+        
+        // 카메라 정지
+        this.stopCamera();
+        
+        // 결과 및 로딩 섹션 숨기기
+        this.elements.resultsSection.style.display = 'none';
+        this.elements.loadingSection.style.display = 'none';
+    }
+    
+    // 파일 업로드 관련 메서드
+    selectFile() {
+        this.elements.fileInput.click();
+    }
+    
+    async handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // 파일 타입 확인
+        if (!file.type.startsWith('image/')) {
+            this.showMessage('이미지 파일만 선택할 수 있습니다.', 'error');
+            return;
+        }
+        
+        // 파일 크기 확인 (50MB 제한)
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+            this.showMessage('파일 크기가 너무 큽니다. 50MB 이하의 파일을 선택해주세요.', 'error');
+            return;
+        }
+        
+        try {
+            // 파일을 base64로 변환
+            const base64Data = await this.fileToBase64(file);
+            this.currentImageData = base64Data;
+            
+            // 미리보기 표시
+            this.elements.filePreview.src = `data:${file.type};base64,${base64Data}`;
+            this.elements.selectedFile.style.display = 'block';
+            
+            this.showMessage(`파일이 선택되었습니다: ${file.name}`, 'success');
+            
+        } catch (error) {
+            console.error('파일 읽기 오류:', error);
+            this.showMessage('파일을 읽을 수 없습니다. 다른 파일을 선택해주세요.', 'error');
+        }
+    }
+    
+    fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                // data:image/jpeg;base64,/9j/4AAQ... 형태에서 base64 부분만 추출
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    reselectFile() {
+        this.elements.selectedFile.style.display = 'none';
+        this.elements.fileInput.value = '';
+        this.currentImageData = null;
+    }
+    
+    async analyzeFile() {
+        if (!this.currentImageData) {
+            this.showMessage('분석할 파일이 선택되지 않았습니다.', 'error');
+            return;
+        }
+        
+        // 로딩 화면 표시
+        this.showLoadingSection();
+        
+        try {
+            const analysisResult = await this.callOpenAIAPI(this.currentImageData);
+            this.showResults(analysisResult);
+            
+        } catch (error) {
+            console.error('분석 오류:', error);
+            this.showMessage('분석 중 오류가 발생했습니다: ' + error.message, 'error');
+            this.hideLoadingSection();
+        }
+    }
     
     async startCamera() {
         // 권한 요청 전 안내 메시지 표시
@@ -1051,7 +1187,9 @@ Flow:
     }
     
     showLoadingSection() {
+        this.elements.methodSelection.style.display = 'none';
         this.elements.cameraSection.style.display = 'none';
+        this.elements.fileSection.style.display = 'none';
         this.elements.resultsSection.style.display = 'none';
         this.elements.loadingSection.style.display = 'block';
     }
@@ -1119,20 +1257,35 @@ Flow:
     
     analyzeAgain() {
         this.elements.resultsSection.style.display = 'none';
+        this.elements.methodSelection.style.display = 'block';
+        
+        // 현재 활성화된 방법에 따라 해당 섹션 표시
+        if (this.elements.cameraMethodBtn.classList.contains('active')) {
         this.elements.cameraSection.style.display = 'block';
+            this.elements.fileSection.style.display = 'none';
+            
         this.elements.startCameraBtn.style.display = 'block';
         this.elements.capturedPhoto.style.display = 'none';
-        
-        // 권한 안내 메시지 다시 표시
-        const permissionInfo = document.getElementById('permission-info');
-        if (permissionInfo) {
-            permissionInfo.style.display = 'block';
-        }
-        
-        // 이전 권한 가이드 제거
-        const existingGuide = document.querySelector('.permission-guide');
-        if (existingGuide) {
-            existingGuide.remove();
+            
+            // 권한 안내 메시지 다시 표시
+            const permissionInfo = document.getElementById('permission-info');
+            if (permissionInfo) {
+                permissionInfo.style.display = 'block';
+            }
+            
+            // 이전 권한 가이드 제거
+            const existingGuide = document.querySelector('.permission-guide');
+            if (existingGuide) {
+                existingGuide.remove();
+            }
+        } else {
+            this.elements.fileSection.style.display = 'block';
+            this.elements.cameraSection.style.display = 'none';
+            
+            // 파일 선택 상태 초기화
+            this.elements.selectedFile.style.display = 'none';
+            this.elements.fileInput.value = '';
+            this.currentImageData = null;
         }
     }
     
