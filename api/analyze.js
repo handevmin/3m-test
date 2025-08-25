@@ -15,11 +15,14 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { prompt, image } = req.body;
+        const { prompt, image, imageType } = req.body;
 
         if (!prompt || !image) {
             return res.status(400).json({ error: 'Missing prompt or image' });
         }
+
+        // 이미지 타입 감지 (기본값: png)
+        const detectedType = imageType || (image.startsWith('/9j') ? 'jpeg' : 'png');
 
         // 환경변수에서 OpenAI API 키 가져오기
         const apiKey = process.env.OPENAI_API_KEY;
@@ -44,7 +47,7 @@ export default async function handler(req, res) {
                         {
                             type: "image_url",
                             image_url: {
-                                url: `data:image/jpeg;base64,${image}`,
+                                url: `data:image/${detectedType};base64,${image}`,
                                 detail: "high"
                             }
                         }

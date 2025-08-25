@@ -799,8 +799,9 @@ class ProductAnalyzer {
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { ideal: 'environment' }, // 후면 카메라 우선
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                    width: { ideal: 4096 },  // 최대 해상도로 증대
+                    height: { ideal: 3072 }, // 4:3 비율 유지
+                    frameRate: { ideal: 30 }
                 }
             });
             
@@ -960,8 +961,8 @@ class ProductAnalyzer {
         // 비디오 프레임을 캔버스에 그리기
         this.context.drawImage(video, 0, 0, this.canvas.width, this.canvas.height);
         
-        // 캔버스를 이미지로 변환
-        const imageDataUrl = this.canvas.toDataURL('image/jpeg', 0.8);
+        // 캔버스를 이미지로 변환 (최고 품질로)
+        const imageDataUrl = this.canvas.toDataURL('image/png'); // PNG 무손실 포맷 사용
         
         // 미리보기 이미지 설정
         this.elements.photoPreview.src = imageDataUrl;
@@ -1035,7 +1036,8 @@ Flow:
             },
             body: JSON.stringify({
                 prompt: prompt,
-                image: base64Image
+                image: base64Image,
+                imageType: 'png'  // PNG 포맷 명시
             })
         });
         
