@@ -784,7 +784,18 @@ class ProductAnalyzer {
 
     
     async startCamera() {
+        // 권한 요청 전 안내 메시지 표시
+        this.showPermissionGuide();
+        
         try {
+            // 먼저 권한 상태 확인
+            const permissionResult = await this.checkCameraPermission();
+            
+            if (permissionResult === 'denied') {
+                this.showPermissionDeniedGuide();
+                return;
+            }
+            
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { ideal: 'environment' }, // 후면 카메라 우선
@@ -798,10 +809,145 @@ class ProductAnalyzer {
             this.elements.capturePhotoBtn.style.display = 'block';
             this.elements.stopCameraBtn.style.display = 'block';
             
+            // 권한 안내 메시지 숨기기
+            const permissionInfo = document.getElementById('permission-info');
+            if (permissionInfo) {
+                permissionInfo.style.display = 'none';
+            }
+            
+            // 권한 허용 성공 메시지
+            this.showMessage('카메라가 성공적으로 연결되었습니다!', 'success');
+            
         } catch (error) {
             console.error('카메라 접근 오류:', error);
-            this.showMessage('카메라에 접근할 수 없습니다. 권한을 확인해주세요.', 'error');
+            this.handleCameraError(error);
         }
+    }
+    
+    async checkCameraPermission() {
+        try {
+            if (navigator.permissions) {
+                const result = await navigator.permissions.query({ name: 'camera' });
+                return result.state; // 'granted', 'denied', 'prompt'
+            }
+            return 'prompt'; // permissions API를 지원하지 않는 브라우저
+        } catch (error) {
+            return 'prompt';
+        }
+    }
+    
+    showPermissionGuide() {
+        const guideMessage = `
+            <div style="text-align: center; margin: 20px 0;">
+                <h3>📸 카메라 권한 허용이 필요합니다</h3>
+                <p style="margin: 10px 0; color: #666;">
+                    3M 제품 분석을 위해 카메라 접근 권한을 허용해주세요.
+                </p>
+                <p style="font-size: 14px; color: #888;">
+                    브라우저에서 권한 요청이 나타나면 "허용"을 선택해주세요.
+                </p>
+            </div>
+        `;
+        
+        // 임시로 메시지 표시 (3초 후 자동 제거)
+        this.showTemporaryMessage(guideMessage, 3000);
+    }
+    
+    showPermissionDeniedGuide() {
+        const deniedGuide = `
+            <div style="text-align: center; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                <h3>🚫 카메라 권한이 거부되었습니다</h3>
+                <p style="margin: 15px 0; color: #666;">
+                    3M 제품 분석을 위해서는 카메라 권한이 필요합니다.
+                </p>
+                <div style="text-align: left; margin: 20px 0; font-size: 14px;">
+                    <strong>📱 모바일에서 권한 허용 방법:</strong><br>
+                    <strong>• Chrome/Edge:</strong> 주소창 옆 🔒 아이콘 → 카메라 허용<br>
+                    <strong>• Safari:</strong> 주소창 옆 aA 아이콘 → 웹사이트 설정<br>
+                    <strong>• Firefox:</strong> 주소창 옆 방패 아이콘 → 권한 설정<br><br>
+                    
+                    <strong>🖥️ PC에서 권한 허용 방법:</strong><br>
+                    주소창에서 카메라 아이콘을 클릭하여 허용으로 변경
+                </div>
+                <button onclick="location.reload()" style="
+                    background: #667eea; 
+                    color: white; 
+                    border: none; 
+                    padding: 10px 20px; 
+                    border-radius: 5px; 
+                    cursor: pointer;
+                    margin-top: 10px;
+                ">
+                    페이지 새로고침
+                </button>
+            </div>
+        `;
+        
+        const section = document.createElement('div');
+        section.innerHTML = deniedGuide;
+        section.className = 'permission-guide';
+        
+        // 카메라 섹션에 가이드 추가
+        this.elements.cameraSection.appendChild(section);
+        
+        // 카메라 시작 버튼 숨기기
+        this.elements.startCameraBtn.style.display = 'none';
+    }
+    
+    handleCameraError(error) {
+        let errorMessage = '';
+        let detailedGuide = '';
+        
+        switch (error.name) {
+            case 'NotAllowedError':
+            case 'PermissionDeniedError':
+                errorMessage = '카메라 권한이 거부되었습니다.';
+                this.showPermissionDeniedGuide();
+                return;
+                
+            case 'NotFoundError':
+            case 'DevicesNotFoundError':
+                errorMessage = '카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인해주세요.';
+                break;
+                
+            case 'NotReadableError':
+            case 'TrackStartError':
+                errorMessage = '카메라가 다른 앱에서 사용 중입니다. 다른 카메라 앱을 종료하고 다시 시도해주세요.';
+                break;
+                
+            case 'OverconstrainedError':
+                errorMessage = '카메라 설정에 문제가 있습니다. 다시 시도해주세요.';
+                break;
+                
+            case 'SecurityError':
+                errorMessage = 'HTTPS 연결이 필요합니다. 안전한 연결에서 다시 시도해주세요.';
+                break;
+                
+            default:
+                errorMessage = `카메라 접근 중 오류가 발생했습니다: ${error.message}`;
+        }
+        
+        this.showMessage(errorMessage, 'error');
+    }
+    
+    showTemporaryMessage(html, duration = 3000) {
+        const messageDiv = document.createElement('div');
+        messageDiv.innerHTML = html;
+        messageDiv.className = 'temporary-message fade-in';
+        messageDiv.style.cssText = `
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin: 10px 0;
+            z-index: 1000;
+        `;
+        
+        const firstSection = document.querySelector('.section');
+        firstSection.parentNode.insertBefore(messageDiv, firstSection);
+        
+        setTimeout(() => {
+            messageDiv.remove();
+        }, duration);
     }
     
     capturePhoto() {
@@ -974,6 +1120,18 @@ Flow:
         this.elements.cameraSection.style.display = 'block';
         this.elements.startCameraBtn.style.display = 'block';
         this.elements.capturedPhoto.style.display = 'none';
+        
+        // 권한 안내 메시지 다시 표시
+        const permissionInfo = document.getElementById('permission-info');
+        if (permissionInfo) {
+            permissionInfo.style.display = 'block';
+        }
+        
+        // 이전 권한 가이드 제거
+        const existingGuide = document.querySelector('.permission-guide');
+        if (existingGuide) {
+            existingGuide.remove();
+        }
     }
     
     showMessage(message, type = 'info') {
