@@ -856,16 +856,16 @@ class ProductAnalyzer {
             return;
         }
         
-        // 파일 크기 확인 (50MB 제한)
-        const maxSize = 50 * 1024 * 1024; // 50MB
+        // 파일 크기 확인 (10MB 제한)
+        const maxSize = 10 * 1024 * 1024; // 10MB
         if (file.size > maxSize) {
-            this.showMessage('파일 크기가 너무 큽니다. 50MB 이하의 파일을 선택해주세요.', 'error');
+            this.showMessage('파일 크기가 너무 큽니다. 10MB 이하의 파일을 선택해주세요.', 'error');
             return;
         }
         
         try {
-            // 파일을 base64로 변환
-            const base64Data = await this.fileToBase64(file);
+            // 이미지 리사이징 후 base64로 변환
+            const base64Data = await this.processAndResizeImage(file);
             this.currentImageData = base64Data;
             
             // 미리보기 표시
@@ -878,6 +878,68 @@ class ProductAnalyzer {
             console.error('파일 읽기 오류:', error);
             this.showMessage('파일을 읽을 수 없습니다. 다른 파일을 선택해주세요.', 'error');
         }
+    }
+    
+    processAndResizeImage(file) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    // 캔버스 생성
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 최대 해상도 설정 (2048x2048)
+                    const maxSize = 2048;
+                    let { width, height } = img;
+                    
+                    // 비율 유지하면서 리사이징
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height = (height * maxSize) / width;
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width = (width * maxSize) / height;
+                            height = maxSize;
+                        }
+                    }
+                    
+                    // 캔버스 크기 설정
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // 이미지 그리기 (고품질 설정)
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // JPEG 85% 품질로 변환
+                    const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+                    
+                    // 크기 체크 (3MB 제한)
+                    const sizeKB = (base64.length * 3) / 4 / 1024;
+                    if (sizeKB > 3000) {
+                        // 더 낮은 품질로 재시도
+                        const base64Low = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+                        const sizeLowKB = (base64Low.length * 3) / 4 / 1024;
+                        
+                        if (sizeLowKB > 3000) {
+                            reject(new Error('이미지가 너무 큽니다. 더 작은 이미지를 선택해주세요.'));
+                            return;
+                        }
+                        resolve(base64Low);
+                    } else {
+                        resolve(base64);
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            img.onerror = () => reject(new Error('이미지를 로드할 수 없습니다.'));
+            img.src = URL.createObjectURL(file);
+        });
     }
     
     fileToBase64(file) {
@@ -1097,8 +1159,8 @@ class ProductAnalyzer {
         // 비디오 프레임을 캔버스에 그리기
         this.context.drawImage(video, 0, 0, this.canvas.width, this.canvas.height);
         
-        // 캔버스를 이미지로 변환 (최고 품질로)
-        const imageDataUrl = this.canvas.toDataURL('image/png'); // PNG 무손실 포맷 사용
+        // 캔버스를 이미지로 변환 (고품질 JPEG로 압축)
+        const imageDataUrl = this.canvas.toDataURL('image/jpeg', 0.85); // JPEG 85% 품질
         
         // 미리보기 이미지 설정
         this.elements.photoPreview.src = imageDataUrl;
@@ -1173,13 +1235,29 @@ Flow:
             body: JSON.stringify({
                 prompt: prompt,
                 image: base64Image,
-                imageType: 'png'  // PNG 포맷 명시
+                imageType: 'jpeg'  // JPEG 포맷 명시
             })
         });
         
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`분석 요청 실패: ${errorData.error || response.statusText}`);
+            let errorMessage = response.statusText;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorMessage;
+            } catch (jsonError) {
+                // JSON 파싱 실패 시 응답 텍스트 확인
+                try {
+                    const errorText = await response.text();
+                    if (errorText.includes('Request Entity Too Large') || errorText.includes('413')) {
+                        errorMessage = '이미지 크기가 너무 큽니다. 더 작은 이미지를 선택하거나 다시 시도해주세요.';
+                    } else {
+                        errorMessage = '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+                    }
+                } catch (textError) {
+                    errorMessage = '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.';
+                }
+            }
+            throw new Error(`분석 요청 실패: ${errorMessage}`);
         }
         
         const data = await response.json();

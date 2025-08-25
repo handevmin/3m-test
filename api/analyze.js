@@ -21,8 +21,16 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing prompt or image' });
         }
 
-        // 이미지 타입 감지 (기본값: png)
-        const detectedType = imageType || (image.startsWith('/9j') ? 'jpeg' : 'png');
+        // 이미지 크기 체크 (3MB 제한)
+        const imageSizeKB = (image.length * 3) / 4 / 1024;
+        if (imageSizeKB > 3000) {
+            return res.status(413).json({ 
+                error: '이미지가 너무 큽니다. 더 작은 이미지를 선택해주세요.' 
+            });
+        }
+
+        // 이미지 타입 감지 (기본값: jpeg)
+        const detectedType = imageType || (image.startsWith('/9j') ? 'jpeg' : 'jpeg');
 
         // 환경변수에서 OpenAI API 키 가져오기
         const apiKey = process.env.OPENAI_API_KEY;
