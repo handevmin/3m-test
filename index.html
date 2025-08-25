@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3M 제품 분석기</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>3M 제품 분석기</h1>
+        </header>
+
+        <main>
+            <!-- API 키 입력 섹션 -->
+            <section id="api-section" class="section">
+                <label for="api-key">OpenAI API 키:</label>
+                <input type="password" id="api-key" placeholder="OpenAI API 키를 입력하세요">
+                <button id="save-api-key">저장</button>
+            </section>
+
+            <!-- 카메라 섹션 -->
+            <section id="camera-section" class="section" style="display: none;">
+                <div id="camera-container">
+                    <video id="camera-stream" autoplay playsinline></video>
+                    <canvas id="photo-canvas" style="display: none;"></canvas>
+                </div>
+                
+                <div id="camera-controls">
+                    <button id="start-camera">카메라 시작</button>
+                    <button id="capture-photo" style="display: none;">사진 촬영</button>
+                    <button id="stop-camera" style="display: none;">카메라 정지</button>
+                </div>
+
+                <div id="captured-photo" style="display: none;">
+                    <img id="photo-preview" alt="촬영된 사진">
+                    <div class="photo-controls">
+                        <button id="retake-photo">다시 촬영</button>
+                        <button id="analyze-photo">분석하기</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 로딩 섹션 -->
+            <section id="loading-section" class="section" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>사진을 분석 중입니다...</p>
+            </section>
+
+            <!-- 결과 섹션 -->
+            <section id="results-section" class="section" style="display: none;">
+                <h2>분석 결과</h2>
+                <div id="results-content"></div>
+                <button id="analyze-again">다시 분석하기</button>
+            </section>
+        </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
