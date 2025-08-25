@@ -1,0 +1,27 @@
+{
+  "name": "3m-product-analyzer",
+  "version": "1.0.0",
+  "description": "모바일 웹앱으로 3M 제품을 AI가 분석하는 서비스",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "start": "vercel dev"
+  },
+  "keywords": [
+    "3M",
+    "product",
+    "analyzer",
+    "AI",
+    "OpenAI",
+    "mobile",
+    "camera",
+    "vision"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  }
+}
+

@@ -1,7 +1,5 @@
 class ProductAnalyzer {
     constructor() {
-        // API 키를 localStorage나 config에서 가져오기
-        this.apiKey = this.getApiKey();
         this.stream = null;
         this.canvas = null;
         this.context = null;
@@ -743,39 +741,14 @@ class ProductAnalyzer {
         this.init();
     }
     
-    getApiKey() {
-        // 1. 먼저 config.js에서 API 키 확인 (개발용)
-        if (typeof window.CONFIG !== 'undefined' && window.CONFIG.OPENAI_API_KEY) {
-            return window.CONFIG.OPENAI_API_KEY;
-        }
-        
-        // 2. localStorage에서 API 키 확인
-        const storedKey = localStorage.getItem('openai-api-key');
-        if (storedKey) {
-            return storedKey;
-        }
-        
-        // 3. 둘 다 없으면 빈 문자열 반환
-        return '';
-    }
-    
     init() {
         this.initializeElements();
         this.attachEventListeners();
-        
-        // API 키가 설정되어 있으면 바로 카메라 섹션으로 이동
-        if (this.apiKey) {
-            this.showCameraSection();
-        }
     }
     
     initializeElements() {
         // DOM 요소들 참조
         this.elements = {
-            apiSection: document.getElementById('api-section'),
-            apiKeyInput: document.getElementById('api-key'),
-            saveApiKeyBtn: document.getElementById('save-api-key'),
-            
             cameraSection: document.getElementById('camera-section'),
             cameraStream: document.getElementById('camera-stream'),
             startCameraBtn: document.getElementById('start-camera'),
@@ -797,15 +770,9 @@ class ProductAnalyzer {
         
         this.canvas = this.elements.photoCanvas;
         this.context = this.canvas.getContext('2d');
-        
-        // API 키가 저장되어 있다면 입력 필드에 표시
-        if (this.apiKey) {
-            this.elements.apiKeyInput.value = this.apiKey;
-        }
     }
     
     attachEventListeners() {
-        this.elements.saveApiKeyBtn.addEventListener('click', () => this.saveApiKey());
         this.elements.startCameraBtn.addEventListener('click', () => this.startCamera());
         this.elements.capturePhotoBtn.addEventListener('click', () => this.capturePhoto());
         this.elements.stopCameraBtn.addEventListener('click', () => this.stopCamera());
@@ -814,24 +781,7 @@ class ProductAnalyzer {
         this.elements.analyzeAgainBtn.addEventListener('click', () => this.analyzeAgain());
     }
     
-    saveApiKey() {
-        const apiKey = this.elements.apiKeyInput.value.trim();
-        
-        if (!apiKey) {
-            this.showMessage('API 키를 입력해주세요.', 'error');
-            return;
-        }
-        
-        this.apiKey = apiKey;
-        localStorage.setItem('openai-api-key', apiKey);
-        this.showMessage('API 키가 저장되었습니다.', 'success');
-        this.showCameraSection();
-    }
-    
-    showCameraSection() {
-        this.elements.apiSection.style.display = 'none';
-        this.elements.cameraSection.style.display = 'block';
-    }
+
     
     async startCamera() {
         try {
@@ -931,38 +881,25 @@ Flow:
 
 3M제품리스트: ${JSON.stringify(this.productList)}`;
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        // Vercel API 라우트로 요청 전송
+        const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "gpt-4o-mini",
-                messages: [{
-                    role: "user",
-                    content: [
-                        { type: "text", text: prompt },
-                        {
-                            type: "image_url",
-                            image_url: {
-                                url: `data:image/jpeg;base64,${base64Image}`,
-                                detail: "high"
-                            }
-                        }
-                    ]
-                }],
-                max_tokens: 1000
+                prompt: prompt,
+                image: base64Image
             })
         });
         
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`API 호출 실패: ${errorData.error?.message || response.statusText}`);
+            throw new Error(`분석 요청 실패: ${errorData.error || response.statusText}`);
         }
         
         const data = await response.json();
-        return data.choices[0].message.content;
+        return data.result;
     }
     
     showLoadingSection() {

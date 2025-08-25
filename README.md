@@ -13,51 +13,62 @@
 
 ### 1. 준비사항
 - OpenAI API 키 (https://platform.openai.com/api-keys)
+- Vercel 계정 (배포용)
 - 카메라가 있는 모바일 기기 또는 컴퓨터
-- HTTPS 환경 (카메라 API 사용을 위해 필요)
 
-### 2. API 키 설정 (보안 중요!)
+### 2. 배포 방법 (Vercel)
 
-**방법 1: 설정 파일 사용 (개발용)**
-```bash
-# config.example.js 파일을 복사해서 config.js 생성
-cp config.example.js config.js
-
-# config.js 파일을 열어서 실제 API 키로 교체
-# window.CONFIG = {
-#     OPENAI_API_KEY: 'your-actual-api-key-here'
-# };
-```
-
-**방법 2: 웹 앱에서 직접 입력 (권장)**
-- 웹 앱 첫 실행 시 API 키 입력 화면이 나타남
-- API 키를 입력하고 저장하면 브라우저에 안전하게 보관됨
-
-### 3. 실행 방법
-
-1. **웹 서버 실행**
+1. **GitHub에 프로젝트 업로드**
    ```bash
-   # Python을 사용한 간단한 웹 서버 실행
-   python -m http.server 8000
-   
-   # 또는 Node.js의 http-server 사용
-   npx http-server -p 8000
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin [your-github-repo-url]
+   git push -u origin main
    ```
 
-2. **브라우저에서 접속**
-   - `http://localhost:8000` 또는 `https://your-domain.com`
-   - HTTPS 환경에서 실행해야 카메라 접근이 가능합니다
+2. **Vercel에 배포**
+   - [Vercel](https://vercel.com)에 로그인
+   - "New Project" 클릭
+   - GitHub 저장소 선택하여 배포
 
-3. **API 키 설정**
-   - 첫 실행 시 OpenAI API 키를 입력하고 저장
-   - API 키는 브라우저 로컬 스토리지에 안전하게 저장됩니다
+3. **환경변수 설정**
+   - Vercel 대시보드 → Project → Settings → Environment Variables
+   - 새 환경변수 추가:
+     - Name: `OPENAI_API_KEY`
+     - Value: [your-openai-api-key]
+   - 저장 후 다시 배포
 
-4. **사진 촬영 및 분석**
-   - "카메라 시작" 버튼을 클릭하여 카메라 활성화
-   - "사진 촬영" 버튼으로 제품 사진 촬영
-   - "분석하기" 버튼을 클릭하여 AI 분석 시작
+### 3. 로컬 개발
 
-### 4. 분석 결과
+1. **로컬 서버 실행**
+   ```bash
+   # Vercel CLI 설치 및 실행 (권장)
+   npm i -g vercel
+   vercel dev
+   
+   # 또는 일반 웹 서버 (API 기능 제한됨)
+   python -m http.server 8000
+   ```
+
+2. **환경변수 설정 (로컬)**
+   - 프로젝트 루트에 `.env.local` 파일 생성:
+     ```
+     OPENAI_API_KEY=your-openai-api-key-here
+     ```
+
+### 4. 사용 방법
+
+1. **웹 앱 접속**
+   - 배포된 URL 또는 `http://localhost:3000` (vercel dev 사용시)
+
+2. **사진 촬영 및 분석**
+   - "카메라 시작" → 카메라 활성화
+   - "사진 촬영" → 제품 사진 촬영
+   - "분석하기" → AI 분석 시작
+
+### 5. 분석 결과
 
 분석 결과는 다음과 같은 형태로 제공됩니다:
 
@@ -77,20 +88,21 @@ cp config.example.js config.js
 
 ```
 3M 테스트/
+├── api/
+│   └── analyze.js      # Vercel API 라우트 (OpenAI 호출)
 ├── index.html          # 메인 HTML 파일
 ├── style.css           # 스타일시트
 ├── script.js           # JavaScript 로직
-├── config.js           # API 키 설정 파일 (git에 업로드 안됨)
-├── config.example.js   # 설정 파일 예시
 ├── .gitignore          # Git 무시 파일 목록
 └── README.md          # 사용 가이드
 ```
 
-## ⚠️ 보안 주의사항
+## 🔒 보안 및 아키텍처
 
-- **config.js 파일은 절대 깃헙에 업로드하지 마세요!** API 키가 노출되면 비용이 발생할 수 있습니다.
-- .gitignore 파일이 config.js를 자동으로 제외하도록 설정되어 있습니다.
-- 실제 서비스 배포 시에는 사용자가 직접 API 키를 입력하도록 하는 것을 권장합니다.
+- **서버사이드 API**: OpenAI API 키는 Vercel 서버에서만 사용되어 클라이언트에 노출되지 않습니다.
+- **환경변수**: API 키는 Vercel 환경변수로 안전하게 관리됩니다.
+- **HTTPS 자동**: Vercel이 자동으로 HTTPS를 제공하여 카메라 API를 안전하게 사용할 수 있습니다.
+- **무료 배포**: Vercel의 무료 플랜으로도 충분히 사용 가능합니다.
 
 ## 지원하는 3M 제품 카테고리
 
@@ -117,15 +129,20 @@ cp config.example.js config.js
 
 ## 문제 해결
 
-### 카메라가 작동하지 않는 경우
-1. HTTPS 환경에서 실행하고 있는지 확인
-2. 브라우저에서 카메라 권한을 허용했는지 확인
-3. 다른 앱이 카메라를 사용하고 있는지 확인
+### 배포 관련 문제
+1. **환경변수 설정**: Vercel 대시보드에서 `OPENAI_API_KEY`가 올바르게 설정되었는지 확인
+2. **재배포**: 환경변수 변경 후 반드시 재배포 필요
+3. **API 라우트 오류**: Vercel 함수 로그에서 오류 확인
 
-### API 오류가 발생하는 경우
-1. OpenAI API 키가 올바른지 확인
-2. API 계정에 충분한 크레딧이 있는지 확인
-3. 네트워크 연결 상태 확인
+### 카메라 관련 문제
+1. **HTTPS 필수**: Vercel은 자동으로 HTTPS를 제공하므로 문제없음
+2. **브라우저 권한**: 카메라 접근 권한을 허용했는지 확인
+3. **모바일 호환성**: iOS Safari, Android Chrome에서 테스트 완료
+
+### API 호출 문제
+1. **크레딧 확인**: OpenAI 계정에 충분한 크레딧이 있는지 확인
+2. **네트워크**: 클라이언트와 Vercel 서버 간 연결 상태 확인
+3. **로그 확인**: Vercel 대시보드에서 함수 실행 로그 확인
 
 ## 라이선스
 

@@ -13,15 +13,8 @@
         </header>
 
         <main>
-            <!-- API 키 입력 섹션 -->
-            <section id="api-section" class="section">
-                <label for="api-key">OpenAI API 키:</label>
-                <input type="password" id="api-key" placeholder="OpenAI API 키를 입력하세요">
-                <button id="save-api-key">저장</button>
-            </section>
-
             <!-- 카메라 섹션 -->
-            <section id="camera-section" class="section" style="display: none;">
+            <section id="camera-section" class="section">
                 <div id="camera-container">
                     <video id="camera-stream" autoplay playsinline></video>
                     <canvas id="photo-canvas" style="display: none;"></canvas>
@@ -57,7 +50,6 @@
         </main>
     </div>
 
-    <script src="config.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
