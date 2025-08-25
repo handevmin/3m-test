@@ -90,11 +90,13 @@
 3M 테스트/
 ├── api/
 │   └── analyze.js      # Vercel API 라우트 (OpenAI 호출)
-├── index.html          # 메인 HTML 파일
-├── style.css           # 스타일시트
-├── script.js           # JavaScript 로직
+├── public/
+│   ├── index.html      # 메인 HTML 파일
+│   ├── style.css       # 스타일시트
+│   └── script.js       # JavaScript 로직
+├── package.json        # 프로젝트 설정
 ├── .gitignore          # Git 무시 파일 목록
-└── README.md          # 사용 가이드
+└── README.md           # 사용 가이드
 ```
 
 ## 🔒 보안 및 아키텍처
